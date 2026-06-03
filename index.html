@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offer 捕手 - AI 求职匹配智能体</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root{--primary:#1a73e8;--primary-hover:#1558b0;--primary-soft:#e8f0fe;--primary-subtle:#f5f8ff;--bg:#edf4ff;--bg-white:#fff;--surface:#f8fbff;--border:#dbe6f5;--border-strong:#c8d8ee;--text:#172033;--text-secondary:#5f6f89;--text-light:#8a9ab3;--success:#2f7d5f;--warning:#9a6a1f;--danger:#b3261e;--radius:8px;--shadow:0 1px 3px rgba(26,115,232,.08);--shadow-lg:0 10px 28px rgba(39,83,138,.12);--transition:.18s ease}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body,#root{height:100%;overflow:hidden}
+button{cursor:pointer;border:none;font:inherit;outline:none;color:inherit}
+input,textarea{font:inherit;outline:none}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#c7d6ea;border-radius:3px}
+@keyframes panelFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes typing{0%,60%,100%{opacity:.3;transform:scale(.8)}30%{opacity:1;transform:scale(1)}}
+
+.app-root{font-family:'Noto Sans SC',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;display:flex;width:100%;height:100vh;overflow:hidden;background:linear-gradient(180deg,rgba(232,240,254,.82),rgba(237,244,255,.96));font-size:14px;color:var(--text)}
+.m-tabs{display:none}
+@media(max-width:900px){
+.app-root{flex-direction:column}
+.m-tabs{display:flex;gap:6px;flex-shrink:0;margin:10px 12px;padding:4px;border:1px solid rgba(229,231,235,.9);border-radius:999px;background:rgba(255,255,255,.92);box-shadow:var(--shadow);backdrop-filter:blur(12px)}
+.m-tab{flex:1;padding:9px 14px;border-radius:999px;background:transparent;color:var(--text-secondary);font-weight:600;font-size:13px;transition:all var(--transition)}
+.m-tab.active{background:var(--primary);color:#fff;box-shadow:0 4px 14px rgba(26,115,232,.22)}
+.pane{flex:1!important;width:100%!important;height:auto!important}
+.chat-pane{border-right:0!important}
+.m-hide{display:none!important}
+.feat-grid{grid-template-columns:1fr 1fr!important}
+.profile-grid{grid-template-columns:1fr!important}
+}
+.pane{flex:0 0 50%;width:50%;height:100%;display:flex;flex-direction:column;overflow:hidden}
+.chat-pane{border-right:1px solid var(--border);box-shadow:8px 0 24px rgba(39,83,138,.05);z-index:1;background:var(--bg-white)}
+.result-pane{background:var(--bg-white)}
+.chat-hd{padding:16px 22px;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(255,255,255,.96);display:flex;align-items:center;gap:10}
+.brand-dot{width:10px;height:10px;border-radius:999px;background:var(--primary);box-shadow:0 0 0 5px var(--primary-soft)}
+.brand-name{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.brand-sub{font-size:12px;color:var(--text-light);font-weight:500}
+.chat-body{flex:1;overflow-y:auto;padding:18px;background:linear-gradient(180deg,#fff,var(--surface))}
+.empty{text-align:center;padding:48px 20px;color:var(--text-secondary);animation:panelFadeIn .28s ease both}
+.empty-panel{text-align:center;padding:80px 20px;color:var(--text-secondary)}
+.hint{font-size:13px;color:var(--text-secondary);line-height:1.6}
+.quick-tags{display:flex;gap:6px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.qtag{padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--primary);font-size:12px;font-weight:600;transition:all var(--transition)}
+.qtag:hover{background:var(--primary-soft);border-color:var(--border-strong);transform:translateY(-1px)}
+.msg{display:flex;gap:10px;margin-bottom:16px;animation:panelFadeIn .22s ease both}
+.msg.user{flex-direction:row-reverse}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.avatar.user{background:var(--primary);color:#fff}
+.msg-body{max-width:80%}
+.bubble{background:#fff;border:1px solid var(--border);padding:10px 14px;border-radius:var(--radius);line-height:1.7;word-break:break-word;box-shadow:var(--shadow);font-size:13px}
+.bubble.user{background:var(--primary);border-color:var(--primary);color:#fff}
+.bubble.user strong{color:#fff}
+.bubble.typing{display:flex;gap:4px;padding:12px 16px}
+.bubble.typing span{display:inline-block;width:8px;height:8px;background:var(--primary);border-radius:50%;animation:typing 1.2s infinite}
+.bubble.typing span:nth-child(2){animation-delay:.2s}
+.bubble.typing span:nth-child(3){animation-delay:.4s}
+.msg-time{font-size:11px;color:var(--text-light);margin-top:4px}
+.msg-time.user{text-align:right}
+.input-area{border-top:1px solid var(--border);padding:14px 18px;flex-shrink:0;background:rgba(255,255,255,.98)}
+.input-row{display:flex;align-items:flex-end;gap:8px}
+.input-row textarea{flex:1;resize:none;min-width:0;padding:9px 13px;border-radius:18px;border:1px solid var(--border);line-height:1.5;max-height:120px;font-size:14px;background:var(--surface);font-family:inherit;transition:border-color var(--transition),background var(--transition),box-shadow var(--transition)}
+.input-row textarea:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px rgba(26,115,232,.12)}
+.send-btn{min-width:72px;height:40px;padding:0 16px;border-radius:999px;background:var(--primary);color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;transition:all var(--transition)}
+.send-btn:hover:not(:disabled){background:var(--primary-hover);box-shadow:0 8px 18px rgba(26,115,232,.18);transform:translateY(-1px)}
+.send-btn:disabled{opacity:.6;cursor:not-allowed}
+.tab-bar{display:flex;gap:4px;border-bottom:1px solid var(--border);padding:10px 12px;flex-shrink:0;overflow-x:auto;background:rgba(255,255,255,.96)}
+.tab-btn{padding:8px 13px;border-radius:999px;background:transparent;color:var(--text-secondary);font-size:13px;white-space:nowrap;font-weight:500;transition:all var(--transition)}
+.tab-btn:hover{color:var(--primary);background:var(--primary-subtle)}
+.tab-btn.active{color:var(--primary);background:var(--primary-soft);font-weight:600;box-shadow:inset 0 0 0 1px rgba(26,115,232,.12)}
+.tab-badge{background:var(--primary);color:#fff;font-size:11px;padding:0 6px;border-radius:10px;margin-left:4px}
+.tab-body{flex:1;overflow-y:auto;padding:22px;background:var(--surface)}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);transition:all var(--transition)}
+.hover-card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.highlight-card{background:linear-gradient(135deg,#f5f8ff,#e8f0fe);border-color:var(--border-strong)}
+.grid-gap{display:grid;gap:12px}
+.fade-in{animation:panelFadeIn .24s ease both}
+.tag-row{display:flex;flex-wrap:wrap;gap:4px}
+.tag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;background:var(--primary-soft);color:var(--primary);font-weight:500}
+.tag.warn{background:#fff4d8;color:#9a6a1f}
+.rank-badge{font-size:12px;font-weight:700;color:var(--primary);background:var(--primary-soft);padding:2px 8px;border-radius:999px}
+.meta-row{display:flex;gap:12px;font-size:12px;color:var(--text-secondary);margin-bottom:10px;flex-wrap:wrap}
+.sub-label{font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px}
+.label{color:var(--text-secondary)}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+.feat-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;box-shadow:var(--shadow)}
+.toolbar-btn{padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--primary);font-weight:600;transition:all var(--transition)}
+.toolbar-btn:hover{background:var(--primary-soft);transform:translateY(-1px)}
+.qa-card{padding:0!important;overflow:hidden}
+.qa-header{display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;transition:background var(--transition)}
+.qa-header:hover{background:var(--primary-subtle)}
+.qa-idx{font-weight:700;color:var(--primary);font-size:13px;flex-shrink:0}
+.qa-cat{font-size:11px;background:var(--primary-soft);padding:2px 8px;border-radius:999px;flex-shrink:0}
+.qa-q{flex:1;font-size:14px;line-height:1.5}
+.qa-arrow{color:var(--text-light);font-size:12px;flex-shrink:0}
+.qa-body{padding:0 14px 14px;border-top:1px solid var(--border)}
+.qa-label{font-size:12px;font-weight:600;color:var(--text-secondary);margin:10px 0 6px}
+.qa-body p{font-size:13px;line-height:1.7}
+.qa-body ul{padding-left:18px;font-size:13px;line-height:1.7}
+
+/* API key modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px)}
+.modal-box{background:#fff;border-radius:16px;padding:32px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-box h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.modal-box p{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px}
+.modal-box input{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;background:var(--surface);margin-bottom:12px}
+.modal-box input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,115,232,.12)}
+.modal-btn{width:100%;padding:12px;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:700;transition:all .18s}
+.modal-btn:hover{background:var(--primary-hover)}
+.modal-note{font-size:11px;color:var(--text-light);margin-top:10px;text-align:center;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const SAMPLE_JOBS = [
+  { id:1, company:"腾讯", title:"产品经理（实习）", location:"深圳", salary:"200-300/天",tags:["产品设计","用户研究","数据分析","项目管理"],requirements:"本科及以上学历，计算机、设计、市场营销等相关专业优先；熟悉互联网产品设计流程，有产品实习经验优先；具备良好的逻辑思维和沟通能力；熟练使用 Axure、Figma 等原型工具。",description:"负责参与社交/游戏/广告等业务线的产品需求分析与方案设计。",industry:"互联网",education:"本科及以上",experience:"实习经验优先",hard_skills:["Axure","Figma","数据分析","SQL"],soft_skills:["逻辑思维","沟通协调","用户思维"],keywords:["产品设计","需求分析","用户调研","数据驱动"]},
+  { id:2, company:"字节跳动", title:"前端开发工程师（实习）", location:"北京", salary:"400-600/天",tags:["React","TypeScript","前端工程化","性能优化"],requirements:"计算机相关专业本科及以上在读；熟悉 HTML/CSS/JavaScript，掌握 React 或 Vue 框架；了解前端工程化与构建工具。",description:"参与抖音/飞书等核心产品的前端开发。",industry:"互联网",education:"本科及以上",experience:"有项目经验优先",hard_skills:["React","Vue","TypeScript","Webpack","Node.js"],soft_skills:["自驱力","团队协作","技术好奇心"],keywords:["前端开发","组件化","性能优化","工程化"]},
+  { id:3, company:"阿里巴巴", title:"数据分析师（实习）", location:"杭州", salary:"300-500/天",tags:["SQL","Python","数据可视化","机器学习"],requirements:"统计学、数学、计算机等相关专业硕士优先；精通 SQL，熟练使用 Python 进行数据处理。",description:"负责业务数据的提取、清洗与分析；搭建数据看板。",industry:"电商/云计算",education:"硕士优先",experience:"有数据分析实习优先",hard_skills:["SQL","Python","Tableau","PowerBI","Excel"],soft_skills:["数据敏感度","业务理解力","报告撰写"],keywords:["数据分析","数据可视化","业务洞察","A/B测试"]},
+  { id:4, company:"美团", title:"后端开发工程师（实习）", location:"北京", salary:"350-500/天",tags:["Java","Spring Boot","MySQL","微服务"],requirements:"计算机相关专业本科及以上在读；熟悉 Java 编程，掌握 Spring Boot 框架。",description:"参与美团核心交易系统的后端开发与优化。",industry:"本地生活",education:"本科及以上",experience:"有后端开发经验优先",hard_skills:["Java","Spring Boot","MySQL","Redis","RPC"],soft_skills:["严谨","抗压能力","系统思维"],keywords:["后端开发","系统设计","高并发","微服务"]},
+  { id:5, company:"华为", title:"AI 算法工程师（实习）", location:"深圳", salary:"400-600/天",tags:["深度学习","NLP","PyTorch","模型训练"],requirements:"计算机、人工智能相关专业硕士及以上；熟悉深度学习框架（PyTorch/TensorFlow）。",description:"参与大模型预训练与微调；负责算法方案设计与实验。",industry:"ICT/通信",education:"硕士及以上",experience:"有论文或竞赛经验优先",hard_skills:["PyTorch","TensorFlow","NLP","CV","数学建模"],soft_skills:["科研能力","论文阅读","创新思维"],keywords:["深度学习","大模型","算法优化","论文复现"]},
+  { id:6, company:"小红书", title:"运营策划（实习）", location:"上海", salary:"180-250/天",tags:["内容运营","活动策划","社媒营销","用户增长"],requirements:"市场营销、新闻传播等相关专业优先；热爱社交媒体，有运营经验优先。",description:"负责平台内容运营与活动策划。",industry:"社交电商",education:"本科及以上",experience:"有运营经验优先",hard_skills:["内容创作","数据分析","PS/剪辑","社媒运营"],soft_skills:["创意能力","网感","用户洞察"],keywords:["内容运营","用户增长","活动策划","社媒营销"]},
+  { id:7, company:"网易", title:"游戏策划（实习）", location:"广州", salary:"250-400/天",tags:["游戏设计","关卡设计","数值策划","用户体验"],requirements:"热爱游戏，对游戏设计有深入思考；有游戏策划相关项目经验优先。",description:"参与游戏系统设计与关卡策划。",industry:"游戏",education:"本科及以上",experience:"有游戏项目经验优先",hard_skills:["Unity/Unreal","Excel数值","游戏系统设计","文档撰写"],soft_skills:["游戏审美","逻辑思维","玩家思维"],keywords:["游戏策划","系统设计","数值平衡","用户体验"]},
+  { id:8, company:"蚂蚁集团", title:"风控算法工程师（实习）", location:"杭州", salary:"400-550/天",tags:["风控模型","机器学习","特征工程","图计算"],requirements:"计算机、统计学等相关专业硕士在读；熟悉常用机器学习算法。",description:"参与支付宝风控模型的开发与迭代。",industry:"金融科技",education:"硕士优先",experience:"有风控/ML经验优先",hard_skills:["Python","SQL","XGBoost","图神经网络","特征工程"],soft_skills:["分析能力","风险意识","严谨"],keywords:["风控模型","反欺诈","特征工程","图计算"]},
+];
+
+async function callAI(apiKey, prompt) {
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST", headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,messages:[{role:"user",content:prompt}]}),
+  });
+  const data = await resp.json();
+  if(data.error) throw new Error(data.error.message);
+  return (data.content?.map(b=>b.text||"").join("")||"").replace(/```json|```/g,"").trim();
+}
+
+function QACard({qa,index}){
+  const[open,setOpen]=useState(false);
+  const cats={"行为面试":"#1a73e8","技术面试":"#b3261e","情景面试":"#9a6a1f","专业知识":"#2f7d5f"};
+  return(
+    <div className="card qa-card">
+      <div className="qa-header" onClick={()=>setOpen(!open)}>
+        <span className="qa-idx">Q{index+1}</span>
+        {qa.category&&<span className="qa-cat" style={{color:cats[qa.category]||"#1a73e8"}}>{qa.category}</span>}
+        <span className="qa-q">{qa.question}</span>
+        <span className="qa-arrow">{open?"▲":"▼"}</span>
+      </div>
+      {open&&(<div className="qa-body">
+        <div className="qa-label">参考答案：</div><p>{qa.answer}</p>
+        {qa.key_points?.length>0&&<div style={{marginTop:10}}><div className="qa-label">要点：</div><ul>{qa.key_points.map((p,j)=><li key={j}>{p}</li>)}</ul></div>}
+      </div>)}
+    </div>
+  );
+}
+
+function App(){
+  const[apiKey,setApiKey]=useState(localStorage.getItem("anthropic_key")||"");
+  const[showModal,setShowModal]=useState(!localStorage.getItem("anthropic_key"));
+  const[keyInput,setKeyInput]=useState("");
+  const[panel,setPanel]=useState("chat");
+  const[tab,setTab]=useState("intro");
+  const[msgs,setMsgs]=useState([]);
+  const[input,setInput]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[profile,setProfile]=useState(null);
+  const[matches,setMatches]=useState(null);
+  const[gaps,setGaps]=useState(null);
+  const[qa,setQa]=useState(null);
+  const[resume,setResume]=useState(null);
+  const[agents,setAgents]=useState([]);
+  const endRef=useRef(null);
+  const taRef=useRef(null);
+
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"})},[msgs,loading]);
+
+  const addMsg=(role,content)=>setMsgs(p=>[...p,{id:Date.now()+Math.random(),role,content,time:new Date().toLocaleTimeString()}]);
+  const addAgent=(name)=>setAgents(p=>[...p,{name,time:new Date().toLocaleTimeString()}]);
+
+  function saveKey(){if(keyInput.trim()){localStorage.setItem("anthropic_key",keyInput.trim());setApiKey(keyInput.trim());setShowModal(false);}}
+
+  async function send(){
+    const text=input.trim();if(!text||loading)return;
+    setInput("");if(taRef.current)taRef.current.style.height="auto";
+    addMsg("user",text);setLoading(true);
+    try{
+      if(!profile){
+        addAgent("Planner Agent");addAgent("Profile Extractor");
+        const raw=await callAI(apiKey,`你是候选人画像提取Agent。从以下输入提取求职者画像。\n用户输入：${text}\n返回JSON（无markdown）：\n{"name":"姓名","education":"学校","degree":"学历","major":"专业","skills":["技能"],"experience":"经历","interests":"兴趣","targetRole":"目标岗位","city":"城市","summary":"摘要"}`);
+        const p=JSON.parse(raw);setProfile(p);
+        addMsg("assistant",`✅ **画像提取完成**\n🎓 ${p.education} / ${p.degree} / ${p.major}\n💡 ${(p.skills||[]).join("、")}\n🎯 ${p.targetRole}　📍 ${p.city}\n\n正在智能匹配岗位...`);
+
+        addAgent("Job Matching Agent");
+        const mRaw=await callAI(apiKey,`求职匹配Agent。画像：${JSON.stringify(p)}\n岗位库：\n${SAMPLE_JOBS.map(j=>`ID:${j.id}|${j.company}-${j.title}|${j.location}|标签:${j.tags.join(",")}|要求:${j.requirements}`).join("\n")}\n返回JSON数组（无markdown），4-6个：\n[{"jobId":1,"score":85,"reason":"原因","strengths":["优势"],"gaps":["不足"]}]`);
+        const mArr=JSON.parse(mRaw).map(r=>({...r,job:SAMPLE_JOBS.find(j=>j.id===r.jobId)})).filter(r=>r.job);
+        setMatches(mArr);setTab("job");setPanel("result");
+        addMsg("assistant",`🎯 **匹配 ${mArr.length} 个岗位：**\n${mArr.slice(0,3).map((m,i)=>`${i+1}. ${m.job.company}-${m.job.title} (${m.score}分)`).join("\n")}\n\n→ 查看右侧「岗位分析」`);
+        const top=mArr[0]?.job;
+        if(top){
+          addAgent("Gap Analysis Agent");
+          try{const gRaw=await callAI(apiKey,`能力缺口Agent。画像：${JSON.stringify(p)}\n目标：${top.company}-${top.title}\n要求：${top.requirements}\n技能：${top.hard_skills?.join(",")}\n返回JSON（无markdown）：\n{"gaps":[{"skill":"技能","severity":"high/medium/low","description":"描述","suggestion":"建议"}],"overallReadiness":"评价","keyActions":["建议"]}`);const g=JSON.parse(gRaw);setGaps(g);addMsg("assistant",`📊 缺口分析完成，发现 ${g.gaps?.length||0} 个关注点。`);}catch(e){}
+
+          addAgent("Interview QA Agent");
+          try{const iRaw=await callAI(apiKey,`面试Agent。岗位：${top.company}-${top.title}\n要求：${top.requirements}\n画像：${JSON.stringify(p)}\n返回JSON数组（无markdown），6-8道：\n[{"question":"问题","category":"行为面试/技术面试/情景面试/专业知识","answer":"答案","key_points":["要点"]}]`);const q=JSON.parse(iRaw);setQa(q);addMsg("assistant",`🎤 已生成 ${q.length} 道面试题。`);}catch(e){}
+
+          addAgent("Resume Content Agent");addAgent("Resume Render Agent");
+          const html=await callAI(apiKey,`简历生成Agent。画像：${JSON.stringify(p)}\n目标：${top.company}-${top.title}\n关键词：${top.keywords?.join(",")}\n直接返回完整HTML简历（无JSON无markdown）。蓝色主题#1a73e8，专业简洁，CSS内联。`);
+          if(html.includes("<")){setResume(html);setTab("resume");addMsg("assistant",`📄 **简历已生成！**查看「简历预览」。\n✨ 全流程完成！`);}
+        }
+      }else{
+        addAgent("Follow-up Agent");
+        const reply=await callAI(apiKey,`求职助手。画像：${JSON.stringify(profile)}\n匹配：${matches?.slice(0,3).map(m=>`${m.job.company}-${m.job.title}`).join(", ")}\n用户：${text}\n用中文回答，200字以内。`);
+        addMsg("assistant",reply);
+      }
+    }catch(e){console.error(e);addMsg("assistant","⚠️ "+e.message);}
+    setLoading(false);
+  }
+
+  const tabList=[{key:"intro",label:"项目介绍"},{key:"job",label:"岗位分析",badge:matches?.length},{key:"resume",label:"简历预览"},{key:"gaps",label:"缺口分析",badge:gaps?.gaps?.length},{key:"interview",label:"面试问答",badge:qa?.length},{key:"debug",label:"调试"}];
+  const sevFn=s=>s==="high"?{bg:"#fce8e6",c:"#b3261e",t:"高优先级"}:s==="low"?{bg:"#e6f4ea",c:"#2f7d5f",t:"低优先级"}:{bg:"#fff4d8",c:"#9a6a1f",t:"中等优先级"};
+
+  return(
+    <div className="app-root">
+      {showModal&&(<div className="modal-overlay"><div className="modal-box">
+        <h3>🔑 设置 API Key</h3>
+        <p>为驱动 AI 智能体工作流，请输入你的 Anthropic API Key。密钥仅存储在浏览器本地，不会上传至任何服务器。</p>
+        <input type="password" value={keyInput} onChange={e=>setKeyInput(e.target.value)} placeholder="sk-ant-..." onKeyDown={e=>{if(e.key==="Enter")saveKey();}}/>
+        <button className="modal-btn" onClick={saveKey}>开始使用</button>
+        <p className="modal-note">💡 获取 API Key：<a href="https://console.anthropic.com" target="_blank" style={{color:"var(--primary)"}}>console.anthropic.com</a><br/>密钥仅保存在 localStorage 中</p>
+      </div></div>)}
+
+      <div className="m-tabs">
+        <button className={`m-tab ${panel==="chat"?"active":""}`} onClick={()=>setPanel("chat")}>对话</button>
+        <button className={`m-tab ${panel==="result"?"active":""}`} onClick={()=>setPanel("result")}>结果</button>
+      </div>
+
+      <div className={`pane chat-pane ${panel!=="chat"?"m-hide":""}`}>
+        <div className="chat-hd"><div className="brand-dot"/><span className="brand-name">Offer 捕手</span><span className="brand-sub">AI 求职匹配智能体</span></div>
+        <div className="chat-body">
+          {msgs.length===0&&<div className="empty">
+            <div style={{fontSize:40,marginBottom:12}}>🎯</div>
+            <p style={{fontWeight:600,marginBottom:8}}>欢迎使用 Offer 捕手</p>
+            <p className="hint">输入你的求职信息开始匹配，例如：</p>
+            <p className="hint" style={{marginTop:8,textAlign:"left",display:"inline-block",lineHeight:1.8}}>「我是北京大学计算机专业大三学生，<br/>熟悉 Python、React、SQL，<br/>做过数据分析项目和电商小程序，<br/>想找产品/数据方向实习，意向北京深圳。」</p>
+            <div className="quick-tags">
+              {["产品经理","前端开发","数据分析","后端开发","AI算法","运营策划"].map(r=><button key={r} className="qtag" onClick={()=>setInput(p=>p+(p?" ":"")+r)}>{r}</button>)}
+            </div>
+          </div>}
+          {msgs.map(m=><div key={m.id} className={`msg ${m.role}`}><div className={`avatar ${m.role}`}>{m.role==="user"?"我":"AI"}</div><div className="msg-body"><div className={`bubble ${m.role}`} dangerouslySetInnerHTML={{__html:m.content.replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\n/g,"<br/>")}}/><div className={`msg-time ${m.role}`}>{m.time}</div></div></div>)}
+          {loading&&<div className="msg assistant"><div className="avatar assistant">AI</div><div className="msg-body"><div className="bubble assistant typing"><span/><span/><span/></div></div></div>}
+          <div ref={endRef}/>
+        </div>
+        <div className="input-area"><div className="input-row">
+          <textarea ref={taRef} value={input} onChange={e=>setInput(e.target.value)} rows={1} placeholder="输入背景信息... (Enter 发送)" onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} onInput={e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,120)+"px";}}/>
+          <button className="send-btn" onClick={send} disabled={loading}>{loading?"处理中":"发送"}</button>
+        </div></div>
+      </div>
+
+      <div className={`pane result-pane ${panel!=="result"?"m-hide":""}`}>
+        <div className="tab-bar">{tabList.map(t=><button key={t.key} className={`tab-btn ${tab===t.key?"active":""}`} onClick={()=>setTab(t.key)}>{t.label}{t.badge?<span className="tab-badge">{t.badge}</span>:null}</button>)}</div>
+        <div className="tab-body">
+          {tab==="intro"&&<div className="fade-in" style={{maxWidth:680}}>
+            <div style={{textAlign:"center",padding:"40px 20px"}}>
+              <div style={{fontSize:48,marginBottom:16}}>🎯</div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:8}}>Offer 捕手 · AI 求职匹配智能体</h2>
+              <p className="hint" style={{maxWidth:500,margin:"0 auto",lineHeight:1.7}}>基于多智能体架构，覆盖 画像提取→岗位匹配→缺口分析→简历生成→面试准备 全流程</p>
+            </div>
+            <div className="feat-grid">
+              {[["🤖","多 Agent 协同","6大Agent协同工作"],["🎯","LLM 精准匹配","多维画像分析"],["📊","能力缺口分析","识别能力差距"],["📄","定制简历生成","自动HTML简历"],["🎤","面试题库","针对性面试题"],["💬","多轮对话","增量更新结果"]].map(([icon,title,desc])=>
+                <div key={title} className="feat-card"><div style={{fontSize:24,marginBottom:6}}>{icon}</div><div style={{fontSize:13,fontWeight:700,marginBottom:3}}>{title}</div><div className="hint" style={{fontSize:12}}>{desc}</div></div>
+              )}
+            </div>
+            {profile&&<div className="card" style={{marginTop:20}}><h4 style={{fontSize:14,fontWeight:700,marginBottom:10}}>📋 候选人画像</h4><div className="profile-grid"><div><span className="label">学校：</span>{profile.education}</div><div><span className="label">学历：</span>{profile.degree}</div><div><span className="label">专业：</span>{profile.major}</div><div><span className="label">目标：</span>{profile.targetRole}</div><div style={{gridColumn:"1/-1"}}><span className="label">技能：</span><span className="tag-row">{(profile.skills||[]).map(s=><span key={s} className="tag">{s}</span>)}</span></div></div></div>}
+          </div>}
+
+          {tab==="job"&&<div className="fade-in" style={{maxWidth:720}}>
+            {!matches?<div className="empty-panel"><div style={{fontSize:32}}>📋</div><p>尚未匹配岗位</p><p className="hint">在左侧输入求职信息</p></div>:
+            <div className="grid-gap"><div className="hint">共匹配 {matches.length} 个岗位</div>
+              {matches.map((m,i)=>{const j=m.job;const sc=m.score>=80?"#2f7d5f":m.score>=60?"#9a6a1f":"#b3261e";const sb=m.score>=80?"#e6f4ea":m.score>=60?"#fff4d8":"#fce8e6";
+              return(<div key={j.id} className="card hover-card">
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                  <div><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><span className="rank-badge">TOP {i+1}</span><h3 style={{fontSize:16,fontWeight:700,margin:0}}>{j.title}</h3></div><div style={{fontSize:13,color:"#1a73e8",fontWeight:600}}>{j.company}</div></div>
+                  <div style={{padding:"6px 14px",borderRadius:12,background:sb,color:sc,fontWeight:800,fontSize:18}}>{m.score}</div>
+                </div>
+                <div className="meta-row"><span>📍 {j.location}</span><span>💰 {j.salary}</span><span>🎓 {j.education}</span><span>🏭 {j.industry}</span></div>
+                <div style={{marginBottom:10}}><div className="sub-label">技术栈 & 技能</div><div className="tag-row">{(j.hard_skills||[]).map(s=><span key={s} className="tag">{s}</span>)}{(j.soft_skills||[]).map(s=><span key={s} className="tag warn">{s}</span>)}</div></div>
+                <div style={{fontSize:13,lineHeight:1.7,marginBottom:8}}><strong>匹配原因：</strong>{m.reason}</div>
+                <div style={{display:"flex",gap:16}}>
+                  <div style={{flex:1}}><div className="sub-label" style={{color:"#2f7d5f"}}>✅ 优势</div>{(m.strengths||[]).map((s,k)=><div key={k} className="hint" style={{fontSize:12}}>• {s}</div>)}</div>
+                  <div style={{flex:1}}><div className="sub-label" style={{color:"#b3261e"}}>⚠️ 待提升</div>{(m.gaps||[]).map((g,k)=><div key={k} className="hint" style={{fontSize:12}}>• {g}</div>)}</div>
+                </div>
+              </div>)})}
+            </div>}
+          </div>}
+
+          {tab==="resume"&&<div className="fade-in" style={{maxWidth:720}}>
+            {!resume?<div className="empty-panel"><div style={{fontSize:32}}>📄</div><p>简历尚未生成</p></div>:
+            <div><div style={{marginBottom:12}}><button className="toolbar-btn" onClick={()=>{const b=new Blob([resume],{type:"text/html"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="resume.html";a.click();URL.revokeObjectURL(u);}}>导出 HTML</button></div>
+            <div className="card" style={{padding:0,overflow:"hidden"}}><iframe srcDoc={resume} style={{width:"100%",height:600,border:"none"}} title="resume"/></div></div>}
+          </div>}
+
+          {tab==="gaps"&&<div className="fade-in" style={{maxWidth:720}}>
+            {!gaps?<div className="empty-panel"><div style={{fontSize:32}}>📊</div><p>缺口分析尚未完成</p></div>:
+            <div className="grid-gap">
+              {gaps.overallReadiness&&<div className="card highlight-card"><div style={{fontSize:13,fontWeight:700,marginBottom:6}}>🎯 整体准备度</div><div style={{fontSize:14,lineHeight:1.7}}>{gaps.overallReadiness}</div></div>}
+              {(gaps.gaps||[]).map((g,i)=>{const s=sevFn(g.severity);return(<div key={i} className="card hover-card"><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontWeight:600,fontSize:14}}>{g.skill}</span><span style={{fontSize:11,padding:"2px 10px",borderRadius:999,background:s.bg,color:s.c,fontWeight:600}}>{s.t}</span></div><p className="hint" style={{marginBottom:6,lineHeight:1.7}}>{g.description}</p>{g.suggestion&&<p style={{fontSize:12,color:"#1a73e8",lineHeight:1.6}}>💡 {g.suggestion}</p>}</div>)})}
+              {gaps.keyActions?.length>0&&<div className="card"><h4 style={{fontSize:14,fontWeight:700,marginBottom:10}}>🚀 行动建议</h4>{gaps.keyActions.map((a,i)=><div key={i} style={{fontSize:13,lineHeight:1.8,paddingLeft:20,position:"relative"}}><span style={{position:"absolute",left:0,color:"#1a73e8",fontWeight:700}}>{i+1}.</span>{a}</div>)}</div>}
+            </div>}
+          </div>}
+
+          {tab==="interview"&&<div className="fade-in" style={{maxWidth:720}}>
+            {!qa?.length?<div className="empty-panel"><div style={{fontSize:32}}>🎤</div><p>面试问答尚未生成</p></div>:
+            <div className="grid-gap"><div className="hint">共 {qa.length} 道面试题</div>{qa.map((q,i)=><QACard key={i} qa={q} index={i}/>)}</div>}
+          </div>}
+
+          {tab==="debug"&&<div className="fade-in" style={{maxWidth:720}}>
+            <div className="card"><h4 style={{fontSize:14,fontWeight:700,marginBottom:12}}>🔧 已触发 Agents</h4>
+              {agents.length===0?<p className="hint">暂无</p>:agents.map((a,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:i<agents.length-1?"1px solid var(--border)":"none"}}><span style={{width:6,height:6,borderRadius:"50%",background:"#1a73e8"}}/><span style={{fontSize:13,fontWeight:600}}>{a.name}</span><span style={{fontSize:11,color:"var(--text-light)",marginLeft:"auto"}}>{a.time}</span></div>)}
+            </div>
+            {profile&&<div className="card" style={{marginTop:12}}><h4 style={{fontSize:14,fontWeight:700,marginBottom:8}}>📦 State</h4><pre style={{fontSize:12,background:"#f8fbff",padding:12,borderRadius:8,overflow:"auto",maxHeight:400,lineHeight:1.6}}>{JSON.stringify({profile,matchCount:matches?.length,gapCount:gaps?.gaps?.length,qaCount:qa?.length,hasResume:!!resume},null,2)}</pre></div>}
+          </div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
